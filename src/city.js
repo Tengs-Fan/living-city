@@ -272,6 +272,7 @@ export function generateCity({ seed = 1, cols = 40, rows = 30, homes = 1, jobs =
       case 'church': return `${rng.pick(['St. Brigid', 'St. Anselm', 'Holy Cross', 'Grace', 'St. Lucia', 'All Souls'])} Church`;
       case 'shop': return `${rng.pick(LAST)} ${rng.pick(['Grocery', 'Hardware', 'Pharmacy', 'Market', 'Books', 'Liquor', 'Clothing', 'Bakery'])}`;
       case 'university': return `Halcyon University, ${bld.street.split(' ')[0]} Hall`;
+      case 'office': return `${rng.pick(LAST)} ${rng.pick(['& Partners', 'Insurance', 'Shipping', 'Associates', 'Holdings', 'Media', 'Engineering', 'Travel', 'Systems', 'Legal', 'Accounting', 'Architects'])}`;
       default: return null;
     }
   };

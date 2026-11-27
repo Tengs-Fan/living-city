@@ -24,7 +24,9 @@ export function newPersonState() {
     fearUntil: 0,
     hurtUntil: 0,
     armedUntil: 0,
-    trauma: 0, // how many times grief or fear has struck
+    trauma: 0, // how hard grief and fear have struck, counted per incident
+    shockAt: -1e9, // when the last incident was
+    leaving: false, // has decided to leave the city
     knows: [], // events he knows the player was behind
     avoid: [], // buildings he keeps away from
     mourns: [], // people he has lost

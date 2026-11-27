@@ -32,8 +32,9 @@ export function newPlan() {
 }
 
 /**
- * @param {object} w  needs seed, city, router, census, people (Map of person states) and
- *                    nightFactor(district): how willing people there are to go out after dark
+ * @param {object} w  needs seed, city, router, census, people (Map of person states),
+ *                    nightFactor(district): how willing people there are to go out after dark,
+ *                    and hauntSpots(): places in the district the player frequents
  */
 export function createPlanner(w) {
   const { seed, city, router, census } = w;
@@ -289,6 +290,11 @@ export function createPlanner(w) {
       default:
         start(home, ACT.HOME);
         leisureDay(id, home, dow, { wake: 570, out: 0.75, second: 0.35, evening: 0.22 });
+    }
+    // revenge: an evening spent looking for the player where he is usually seen
+    if (ps && ps.flags & FLAG.HOSTILE && endPlace === home && arch !== ARCH.HOMELESS && ps.hurtUntil <= t0 && free < 1230) {
+      const spots = w.hauntSpots();
+      if (spots.length) go(spots[hp % spots.length], ACT.HANG, Math.max(free + 20, 1080 + rnd() * 60), 80 + rnd() * 60);
     }
     if (here() !== endPlace) go(endPlace, endKind, 0, 0, true);
     S.depart[S.n - 1] = DAY;

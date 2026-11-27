@@ -12,8 +12,13 @@ import { createRouter, MODE, MODE_NAMES } from './routing.js';
 import { generateCensus, ARCH_NAMES } from './census.js';
 import { createPlanner, newPlan, ACT, ACT_NAMES, MAX_STOPS, DAY } from './plans.js';
 import { createDayIndex } from './presence.js';
-import { describeState } from './state.js';
+import { describeState, newPersonState } from './state.js';
 import { hash2, unit } from './rng.js';
+import { districtAt } from './city.js';
+import { createMood } from './mood.js';
+import { createMemory } from './memory.js';
+import { createRules } from './consequences.js';
+import { createDirector } from './director.js';
 
 export { ACT, ACT_NAMES, DAY, MODE, MODE_NAMES, ARCH_NAMES };
 
@@ -40,10 +45,24 @@ export function createWorld(opts = {}) {
     t: 6 * 60,
     /** People something has happened to: id -> state record (see state.js). */
     people: new Map(),
-    /** Fear per district as it stood at dawn; plans for the day are built against it. */
-    fearAtDawn: new Float32Array(city.districts.length),
+    /** Fear per district as it stood at midnight; the day's plans are built against it. */
+    fearToday: new Float32Array(city.districts.length),
+    /** Game hours the player has lately spent in each district, and the one he is seen in most. */
+    haunts: new Float32Array(city.districts.length),
+    hauntToday: -1,
   };
-  w.nightFactor = (district) => 1 - 0.8 * w.fearAtDawn[district];
+  w.nightFactor = (district) => 1 - 0.8 * w.fearToday[district];
+  const hauntCache = new Map();
+  w.hauntSpots = () => {
+    const d = w.hauntToday;
+    if (d < 0) return [];
+    let list = hauntCache.get(d);
+    if (!list) {
+      list = B.filter((b) => b.district === d && (b.kind === 'bar' || b.kind === 'park' || b.kind === 'shop')).slice(0, 8).map((b) => b.id);
+      hauntCache.set(d, list);
+    }
+    return list;
+  };
   const planner = createPlanner(w);
 
   // --- where things are --------------------------------------------------------------------
@@ -215,5 +234,91 @@ export function createWorld(opts = {}) {
     return lines;
   };
 
+  // --- memory, consequences, mood, director ------------------------------------------------
+  createMood(w);
+  createMemory(w);
+  createRules(w);
+  createDirector(w);
+
+  function daily() {
+    w.moodDay();
+    w.rules.day();
+    w.markers = w.markers.filter((m) => m.until > w.t);
+    let top = -1, most = 6; // he has to have spent a few hours somewhere to be looked for there
+    for (let d = 0; d < w.haunts.length; d++) {
+      w.haunts[d] *= 0.97;
+      if (w.haunts[d] > most) { most = w.haunts[d]; top = d; }
+    }
+    w.hauntToday = top;
+    w.fearToday.set(w.mood.fear);
+    tables.clear();
+  }
+
+  /**
+   * Let game time pass. Due consequences run in order; mood fades at each midnight. With the
+   * player present (the default) the director may play a scene, which is returned. Pass
+   * { player: false } for a skip of time the player does not live through.
+   */
+  w.advance = (minutes, { player = true } = {}) => {
+    const end = w.t + minutes;
+    for (;;) {
+      const hour = (Math.floor(w.t / 60) + 1) * 60;
+      let next = Math.min(end, hour);
+      if (w.tasks.length && w.tasks[0].t < next) next = Math.max(w.t, w.tasks[0].t);
+      w.t = next;
+      while (w.tasks.length && w.tasks[0].t <= w.t) {
+        const k = w.tasks.shift();
+        w.handlers[k.type]?.(k);
+      }
+      if (w.t === hour) {
+        if (player) w.haunts[districtAt(city, w.player.x, w.player.y)]++;
+        if (hour % DAY === 0) daily();
+      }
+      if (w.t >= end) break;
+    }
+    return player ? w.director.check() : null;
+  };
+
+  // --- save and load: only what play changed ---------------------------------------------------
+  const blank = newPersonState();
+  w.save = () => ({
+    version: 1, opts: w.opts, t: w.t,
+    people: [...w.people].map(([id, ps]) => {
+      const out = { id };
+      for (const k in ps) {
+        const v = ps[k];
+        if (Array.isArray(v) ? v.length : v !== blank[k]) out[k] = Array.isArray(v) ? [...v] : v;
+      }
+      return out;
+    }),
+    events: [...w.events.values()], eventSeq: w.eventSeq,
+    tasks: w.tasks, taskSeq: w.taskSeq,
+    news: w.news, markers: w.markers,
+    payoffs: w.payoffs, payoffSeq: w.payoffSeq, scenes: w.scenes, lastScene: w.lastScene,
+    mood: Object.fromEntries(Object.entries(w.mood).map(([k, v]) => [k, [...v]])),
+    fearToday: [...w.fearToday], haunts: [...w.haunts], hauntToday: w.hauntToday,
+    player: w.player, log: w.log.slice(-300),
+  });
+
+  w.restore = (data) => {
+    const copy = structuredClone(data);
+    w.t = copy.t;
+    w.people.clear();
+    for (const { id, ...rest } of copy.people) w.people.set(id, { ...newPersonState(), ...rest });
+    w.events = new Map(copy.events.map((e) => [e.id, e]));
+    for (const k of ['eventSeq', 'tasks', 'taskSeq', 'news', 'markers', 'payoffs', 'payoffSeq', 'scenes', 'lastScene', 'hauntToday', 'player', 'log']) w[k] = copy[k];
+    for (const k in w.mood) w.mood[k].set(copy.mood[k]);
+    w.fearToday.set(copy.fearToday);
+    w.haunts.set(copy.haunts);
+    tables.clear();
+    return w;
+  };
+
   return w;
+}
+
+/** Rebuild a world from a save: the city and census from the seed, then what play changed. */
+export function loadWorld(data) {
+  if (data.version !== 1) throw new Error(`cannot read a save of version ${data.version}`);
+  return createWorld(data.opts).restore(data);
 }
