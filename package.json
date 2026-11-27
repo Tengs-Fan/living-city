@@ -4,7 +4,6 @@
   "description": "A game-free prototype of an open-world city that remembers: census, daily plans, presence, event memory, consequences.",
   "type": "module",
   "private": true,
-  "license": "MIT",
   "bin": { "living-city": "bin/living-city.js" },
   "scripts": {
     "test": "node --test \"test/*.test.js\"",

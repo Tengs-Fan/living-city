@@ -431,20 +431,25 @@ export function generateCity({ seed = 1, cols = 40, rows = 30, homes = 1, jobs =
     }
   }
 
-  const nearCache = new Map();
+  const nearCache = {};
   /** The six places of a category nearest a building, nearest first. */
   const near = (cat, from) => {
-    const key = cat + ':' + from;
-    let list = nearCache.get(key);
+    const cache = (nearCache[cat] ??= new Array(buildings.length));
+    let list = cache[from];
     if (list) return list;
-    const src = buildings[from];
-    list = (categories[cat] ?? [])
-      .filter((id) => id !== from)
-      .map((id) => [id, (buildings[id].doorX - src.doorX) ** 2 + (buildings[id].doorY - src.doorY) ** 2])
-      .sort((p, q) => p[1] - q[1] || p[0] - q[0])
-      .slice(0, 6)
-      .map((p) => p[0]);
-    nearCache.set(key, list);
+    const src = buildings[from], ids = categories[cat] ?? [];
+    const best = [], bestD = [];
+    for (let k = 0; k < ids.length; k++) {
+      const id = ids[k];
+      if (id === from) continue;
+      const d = (buildings[id].doorX - src.doorX) ** 2 + (buildings[id].doorY - src.doorY) ** 2;
+      if (best.length === 6 && d >= bestD[5]) continue;
+      let at = best.length < 6 ? best.length : 5;
+      while (at > 0 && bestD[at - 1] > d) { best[at] = best[at - 1]; bestD[at] = bestD[at - 1]; at--; }
+      best[at] = id; bestD[at] = d;
+    }
+    list = best;
+    cache[from] = list;
     return list;
   };
 

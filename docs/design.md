@@ -1,7 +1,8 @@
 # The living city: residents, memory and consequences
 
 Status: design proposal, November 2026.
-Nothing here is built yet.
+Milestones M0 to M3 now exist as a game-free prototype in this repository; the [README](../README.md) says what is built, what was measured and where the prototype departs from this page.
+M4 is not started.
 It is written for a GTA-style open-world game and assumes no particular engine or codebase.
 
 Open-world cities already look busy.
@@ -412,6 +413,7 @@ M0 and M1 alone already answer the complaint this started from.
 - **Is a real street map the right first step?**
   It gives realistic geometry for free, but the import is work that tests nothing about consequences.
   A generated grid city would get to M3 sooner.
+  The prototype took the generated city for that reason; a real map can still replace it.
 
 ## References
 

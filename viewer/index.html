@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- head:start -->
+<title>Living City</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap">
+<style>
+/* Layout: a survey map with a records office beside it. The map is the page; the panel is the
+   ledger for whatever is selected on it. Side by side on a wide screen, stacked on a phone. */
+:root {
+  --bg: #eef1f4; --panel: #fbfcfd; --raised: #ffffff; --ink: #16202b; --muted: #586677; --line: #d3dae2;
+  --accent: #0a6c88; --accent-ink: #ffffff; --danger: #b3261e; --warn: #b45309; --good: #2f7d32; --police: #2f5fb3;
+  --land: #e3e8ed; --street: #fbfcfd; --water: #b7d2e6; --sand: #ead8ac; --park: #bcd9b0;
+  --b-home: #c9d1da; --b-office: #9fb0c6; --b-industry: #c4b8a3; --b-civic: #8fb0a4; --b-shop: #dcc1a6; --b-hotel: #c8b6d8;
+  --walk: #0a6c88; --car: #c2410c; --bus: #7c3aed; --stay: #2f7d32; --mark: #b3261e; --fear: 179, 38, 30;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --cond: "IBM Plex Sans Condensed", "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d131a; --panel: #131b25; --raised: #1a2430; --ink: #e5eaf0; --muted: #93a2b4; --line: #27333f;
+    --accent: #4cc2e0; --accent-ink: #06222b; --danger: #ff7a70; --warn: #f0a44b; --good: #7bd88f; --police: #7fa8f5;
+    --land: #111922; --street: #2a3644; --water: #0a2639; --sand: #453e2c; --park: #1c3626;
+    --b-home: #1d2733; --b-office: #2b3b51; --b-industry: #3a3329; --b-civic: #223d37; --b-shop: #3f3126; --b-hotel: #342a44;
+    --walk: #5fd0ea; --car: #ffa257; --bus: #b79bff; --stay: #7bd88f; --mark: #ff7a70; --fear: 255, 90, 80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d131a; --panel: #131b25; --raised: #1a2430; --ink: #e5eaf0; --muted: #93a2b4; --line: #27333f;
+  --accent: #4cc2e0; --accent-ink: #06222b; --danger: #ff7a70; --warn: #f0a44b; --good: #7bd88f; --police: #7fa8f5;
+  --land: #111922; --street: #2a3644; --water: #0a2639; --sand: #453e2c; --park: #1c3626;
+  --b-home: #1d2733; --b-office: #2b3b51; --b-industry: #3a3329; --b-civic: #223d37; --b-shop: #3f3126; --b-hotel: #342a44;
+  --walk: #5fd0ea; --car: #ffa257; --bus: #b79bff; --stay: #7bd88f; --mark: #ff7a70; --fear: 255, 90, 80;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); overflow: hidden; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#app { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+
+/* top bar */
+#bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-block: 8px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--panel); border-bottom: 1px solid var(--line); }
+.brand { display: flex; flex-direction: column; line-height: 1.15; margin-right: auto; min-width: 0; }
+.brand b { font: 600 17px/1.1 var(--cond); letter-spacing: 0.01em; }
+.brand span { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clock { font-family: var(--mono); font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 8px; }
+.clock #time { font-size: 22px; font-weight: 500; }
+.clock #day { color: var(--muted); font-size: 12px; }
+.controls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.btn { border: 1px solid var(--line); background: var(--raised); border-radius: 6px; padding: 5px 10px; font-size: 13px; white-space: nowrap; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 500; }
+.btn.danger { border-color: var(--danger); color: var(--danger); }
+.btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: var(--raised); padding: 5px 9px; font: 13px var(--mono); border-left: 1px solid var(--line); }
+.seg button:first-child { border-left: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+
+/* map and panel */
+main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+#mapwrap { position: relative; flex: 1 1 52%; min-height: 0; background: var(--land); touch-action: none; overflow: hidden; }
+#map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }
+#map.dragging { cursor: grabbing; }
+#legend { position: absolute; left: max(10px, env(safe-area-inset-left, 0px)); bottom: 10px; display: flex; flex-wrap: wrap; gap: 4px 12px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px;
+  font-size: 12px; color: var(--muted); max-width: calc(100% - 20px); pointer-events: none; }
+#legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+#zoom { position: absolute; right: max(10px, env(safe-area-inset-right, 0px)); top: 10px; display: flex; flex-direction: column; gap: 4px; }
+#zoom .btn { width: 34px; height: 34px; padding: 0; font: 500 18px var(--mono); }
+#loading { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; background: var(--bg); padding: 24px; }
+#loading b { font: 600 20px var(--cond); display: block; margin-bottom: 6px; }
+#loading span { color: var(--muted); }
+#scene { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); width: min(560px, calc(100% - 28px));
+  background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; z-index: 3;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
+#toast { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); max-width: calc(100% - 110px); background: var(--ink); color: var(--bg);
+  border-radius: 6px; padding: 6px 12px; font-size: 13px; text-align: center; pointer-events: none; }
+#scene .cue { font: 600 12px var(--cond); letter-spacing: 0.08em; text-transform: uppercase; color: var(--danger); margin-bottom: 6px; }
+#scene p { margin: 0 0 6px; font-size: 15px; line-height: 1.5; text-wrap: pretty; }
+#scene .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; color: var(--muted); font-size: 12px; }
+
+#panel { flex: 1 1 48%; min-height: 0; display: flex; flex-direction: column; background: var(--panel); border-top: 1px solid var(--line); }
+#tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--line); flex: none;
+  padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); }
+#tabs button { border: 0; background: none; padding: 9px 10px 8px; font: 600 13px var(--cond); letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
+#tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+#body { flex: 1; min-height: 0; overflow-y: auto; padding-block: 12px 20px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+#body > section { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+h2 { font: 600 19px/1.2 var(--cond); margin: 0; text-wrap: balance; }
+h3 { font: 600 12px var(--cond); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+p { margin: 0; }
+.sub { color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.chip.bad { border-color: var(--danger); color: var(--danger); }
+.chip.warn { border-color: var(--warn); color: var(--warn); }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; }
+a.link { color: var(--accent); text-decoration: none; cursor: pointer; }
+a.link:hover { text-decoration: underline; }
+dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; }
+dt { color: var(--muted); }
+dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+ul.plain { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+a.link.gone { text-decoration: line-through; color: var(--muted); }
+
+/* a day as a 24-hour strip */
+.strip { position: relative; height: 22px; border-radius: 4px; overflow: hidden; background: var(--line); }
+.strip span { position: absolute; top: 0; bottom: 0; }
+.strip .now { width: 2px; background: var(--ink); z-index: 2; }
+.hours { display: flex; justify-content: space-between; font: 11px var(--mono); color: var(--muted); margin-top: 2px; }
+.stops { font-family: var(--mono); font-size: 12px; }
+.stops li { display: grid; grid-template-columns: 92px 1fr; gap: 8px; padding: 2px 6px; border-radius: 4px; }
+.stops li.leg { color: var(--muted); }
+.stops li.cur { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.stops i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+
+/* districts */
+.district { border-top: 1px solid var(--line); padding-top: 8px; display: grid; gap: 4px; }
+.district header { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.district header b { font: 600 15px var(--cond); }
+.meters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.meter { font-size: 11px; color: var(--muted); }
+.meter div { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 2px; }
+.meter div span { display: block; height: 100%; }
+
+/* timeline */
+.log li { display: grid; grid-template-columns: 104px 1fr; gap: 10px; padding: 4px 0; border-top: 1px solid var(--line); }
+.log time { font: 11px/1.6 var(--mono); color: var(--muted); }
+.log li.news { color: var(--police); }
+.log li.scene { color: var(--danger); font-weight: 500; }
+.log li.quiet { color: var(--muted); }
+.steps { counter-reset: step; display: flex; flex-direction: column; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.steps li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; }
+.steps li::before { counter-increment: step; content: counter(step); font: 500 13px var(--mono); width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center; border: 1px solid var(--line); color: var(--muted); }
+.steps li.done::before { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.steps li > div { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; min-width: 0; }
+label.check { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; }
+
+@media (min-width: 900px) {
+  main { flex-direction: row; }
+  #mapwrap { flex: 1 1 auto; }
+  #panel { flex: 0 0 400px; border-top: 0; border-left: 1px solid var(--line); }
+}
+@media (max-width: 520px) {
+  #bar { gap: 6px 10px; }
+  .controls { gap: 4px; }
+  .btn { padding: 5px 6px; }
+  .seg button { padding: 5px 6px; }
+  .btn.primary { padding-inline: 9px; }
+  #tabs button { padding: 9px 7px 8px; font-size: 12px; letter-spacing: 0.02em; }
+  #legend { font-size: 11px; gap: 2px 9px; padding: 4px 7px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+<!-- head:end -->
+</head>
+<body>
+<!-- body:start -->
+<div id="app">
+  <header id="bar">
+    <div class="brand"><b>Halcyon Bay</b><span id="pop">a generated city</span></div>
+    <div class="clock"><span id="day">Mon, day 0</span><span id="time">--:--</span></div>
+    <div class="controls">
+      <button class="btn primary" id="play" aria-pressed="false">Pause</button>
+      <div class="seg" id="speed" role="group" aria-label="Speed of time">
+        <button data-speed="0.5" title="A game day in 48 minutes, as in GTA">1&times;</button>
+        <button data-speed="5" aria-pressed="true">10&times;</button>
+        <button data-speed="30">60&times;</button>
+        <button data-speed="120">240&times;</button>
+      </div>
+      <button class="btn" id="skipH" title="Jump one game hour" aria-label="Jump one game hour">+1h</button>
+      <button class="btn" id="skipD" title="Jump one game day" aria-label="Jump one game day">+1d</button>
+      <button class="btn" id="skipM" title="Thirty game days pass without the player" aria-label="Jump thirty game days">+30d</button>
+    </div>
+  </header>
+  <main>
+    <div id="mapwrap">
+      <canvas id="map" aria-label="Map of Halcyon Bay with everyone who is outside drawn as a dot"></canvas>
+      <div id="legend">
+        <span><i style="background:var(--walk)"></i>on foot</span>
+        <span><i style="background:var(--car)"></i>car</span>
+        <span><i style="background:var(--bus)"></i>bus</span>
+        <span><i style="background:var(--stay)"></i>outdoors</span>
+        <span><i style="background:var(--mark)"></i>marked by the player</span>
+      </div>
+      <div id="zoom">
+        <button class="btn" id="zin" aria-label="Zoom in">+</button>
+        <button class="btn" id="zout" aria-label="Zoom out">&minus;</button>
+        <button class="btn" id="zfit" aria-label="Show the whole city" title="Whole city">&#9633;</button>
+      </div>
+      <div id="toast" hidden></div>
+      <div id="scene" hidden></div>
+      <div id="loading"><div><b>Building Halcyon Bay</b><span id="loadmsg">Laying out streets and filling homes&hellip;</span></div></div>
+    </div>
+    <aside id="panel">
+      <nav id="tabs" role="tablist">
+        <button data-tab="story" role="tab" aria-selected="true">Story</button>
+        <button data-tab="person" role="tab" aria-selected="false">Person</button>
+        <button data-tab="ring" role="tab" aria-selected="false">Player</button>
+        <button data-tab="districts" role="tab" aria-selected="false">Districts</button>
+        <button data-tab="timeline" role="tab" aria-selected="false">Timeline</button>
+      </nav>
+      <div id="body"><section id="view"></section></div>
+    </aside>
+  </main>
+</div>
+<script type="module" src="./main.js"></script>
+<!-- body:end -->
+</body>
+</html>
