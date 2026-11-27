@@ -1,0 +1,19 @@
+{
+  "name": "living-city",
+  "version": "0.1.0",
+  "description": "A game-free prototype of an open-world city that remembers: census, daily plans, presence, event memory, consequences.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "bin": { "living-city": "bin/living-city.js" },
+  "scripts": {
+    "test": "node --test",
+    "city": "node bin/living-city.js",
+    "serve": "python3 -m http.server 8080",
+    "bundle": "node scripts/bundle.mjs"
+  },
+  "engines": { "node": ">=20" },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}
